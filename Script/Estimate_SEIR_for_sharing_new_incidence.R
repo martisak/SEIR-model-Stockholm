@@ -38,7 +38,9 @@ library(openxlsx)     # to write tables in excel
 library(RColorBrewer)
 library(rootSolve)    # to load function multiroot that finds roots to system of equations
 library(deSolve)
-
+library(tidyverse)
+library(glue)
+library(rebus)
 
 
 #-----------------------------------------------------------------------------------
@@ -51,10 +53,10 @@ library(deSolve)
 project.path 	     <- ""
 
 
-data.path 		     <- paste(project.path, "Data", sep="")
-script.path 	     <- paste(project.path, "Script", sep="")
-table.path         <- paste(project.path, "Results/Tables", sep="")
-figure.path        <- paste(project.path, "Results/Figures", sep="")
+data.path 		     <- paste0(project.path, "Data")
+script.path 	     <- paste0(project.path, "Script")
+table.path         <- paste0(project.path, "Results/Tables")
+figure.path        <- paste0(project.path, "Results/Figures")
 
 
 #---------------------------------------------------------------------------------------------------
@@ -105,23 +107,24 @@ CRI_95_up <- function(x){
 # This is the data used in the analysis. It differs from some of the reported case data since we 
 # removed imported cases. 
 
-Stockholm_Data_10_april <- read.table(file=paste(data.path,"/Data_2020-04-10Ny.txt",sep=""), sep = " ", header=TRUE)
+Stockholm_Data_10_april <- read_delim(
+  paste0(data.path, "/Data_2020-04-10Ny.txt"),
+  delim = " ", col_names = TRUE)
 
 # Take out population
-load(file.path(data.path, "Sverige_population_2019.Rdata"))
+pop_dfs <- mget(load(file.path(data.path, "Sverige_population_2019.Rdata")))
+dat_pop <- pop_dfs$dat_pop
+dat_pop_region <- pop_dfs$dat_pop_region
+dat_pop_region_totalt <- pop_dfs$dat_pop_region_totalt
 
-Region_population <- dat_pop_region_totalt
-r_name            <- levels(Region_population$ARegion)
+Region_population <- dat_pop_region_totalt %>% 
+  mutate(ARegion = str_remove(ARegion, 
+                              pattern = or("s ", " ") %R% "län" %R% END))
 
-region_namn <- unlist(strsplit(r_name, split="s län"))
-region_namn <- unlist(strsplit(region_namn, split=" län"))
-region_namn <- region_namn[-which(region_namn == "Riket")]
-
-Region_population$ARegion <- region_namn
-
-df_riket          <- data.frame(ARegion = "Riket", 
-                                Pop = sum(dat_pop_region_totalt$Pop))
-Region_population <- rbind(Region_population, df_riket)
+Region_population <- Region_population %>%
+  bind_rows(Region_population %>% 
+              summarize(Pop = sum(Pop)) %>% 
+              mutate(ARegion = "Riket"))
 
 
 #---------------------------------------------------------------------------------------------------
