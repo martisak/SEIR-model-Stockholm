@@ -30,7 +30,14 @@ heading <- "
 #------------------------------------------------------------------------------------
 \n"
 
-
+#---------------------------------------------------------------------------------------------------
+# LIBRARIES
+#---------------------------------------------------------------------------------------------------
+library(reshape2)
+library(openxlsx)     # to write tables in excel
+library(RColorBrewer)
+library(rootSolve)    # to load function multiroot that finds roots to system of equations
+library(deSolve)
 
 
 
@@ -48,16 +55,6 @@ data.path 		     <- paste(project.path, "Data", sep="")
 script.path 	     <- paste(project.path, "Script", sep="")
 table.path         <- paste(project.path, "Results/Tables", sep="")
 figure.path        <- paste(project.path, "Results/Figures", sep="")
-
-
-#---------------------------------------------------------------------------------------------------
-# LIBRARIES
-#---------------------------------------------------------------------------------------------------
-library(reshape2)
-library(openxlsx)     # to write tables in excel
-library(RColorBrewer)
-require(rootSolve)    # to load function multiroot that finds roots to system of equations
-require(deSolve)
 
 
 #---------------------------------------------------------------------------------------------------
@@ -81,11 +78,8 @@ CRI <- function(x, level = 0.95){
   x <- sort(x)
   resL <- x[n * L] 
   resU <- x[n * U]
-  #names(resL) <- paste((L * 100), "%") 
-  #names(resU) <- paste((U * 100), "%")
   
   return(c(resL,resU))
-  
 }
 
 CRI_90_low <- function(x){
