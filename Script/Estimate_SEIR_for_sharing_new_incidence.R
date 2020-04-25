@@ -151,6 +151,14 @@ gammaD_value <- 1 / 5
 Atol <- 1e-8
 Rtol <- 1e-10
 
+logit <- function(p) {
+  log(p) / log(1 - p)
+}
+
+expit <- function(x) {
+  1 / (1 + exp(-x))
+}
+
 Estimate_function_Stockholm_only_local <- function(
     p_symp = 0.5, 
     p_lower_inf = 0.5, 
@@ -158,7 +166,8 @@ Estimate_function_Stockholm_only_local <- function(
     eta = eta_value, 
     iter = 20,
     wfh_date = as.Date("2020-03-16"),
-    non_reported = FALSE) {
+    non_reported = FALSE,
+    verbose = TRUE) {
   
   ## Population size Stockholm
   N <- Region_population %>% filter(ARegion == "Stockholm") %>% pull(Pop)
@@ -174,16 +183,16 @@ Estimate_function_Stockholm_only_local <- function(
   dayatyear <- as.integer(Namedate - as.Date("2019-12-31"))
   
     
-  Opt_par_names <- c("delta", "epsilon", "theta")
+  Opt_par_names <- c("logit_delta", "epsilon", "log_theta")
     
   ## Function to create guesses for the optimisation
   ## The range of the guesses can be changed, 
   ## these are good for the specific dates and parameter combinations of p_symp and p_lower_inf
   Guesses <- function(){ 
     
-    u_d <- runif(1, 0.05,  0.6) # guess for delta 
+    u_d <- logit(runif(1, 0.05, 0.6)) # guess for logit_delta 
     u_e <- runif(1, -0.6, 0)    # guess for epsilon
-    u_t <- runif(1, 0, 15)      # guess for theta
+    u_t <- log(runif(1, 0, 15))      # guess for log_theta
 
     return(c(u_d, u_e, u_t))
   }
@@ -252,10 +261,14 @@ Estimate_function_Stockholm_only_local <- function(
   RSS <- function(parameters) {
         
     names(parameters) <- Opt_par_names
+    pars <- list(delta = expit(parameters["logit_delta"]),
+                 epsilon = parameters["epsilon"],
+                 theta = exp(parameters["log_theta"]))
+    
     Dummy_infectivity <- beta_peak_free(t = c(0:700), 
-                                        delta = parameters["delta"], 
-                                        epsilon = parameters["epsilon"],  
-                                        theta = parameters["theta"])
+                                        delta = pars$delta, 
+                                        epsilon = pars$epsilon,  
+                                        theta = pars$theta)
     # if the infectivity is negative, throw away guess
     if (min(Dummy_infectivity) < 0) {
       res <- 10^12
@@ -267,14 +280,14 @@ Estimate_function_Stockholm_only_local <- function(
       out <- ode(y = init, 
                  times = Day, 
                  func = model, 
-                 parms = parameters, 
+                 parms = pars, 
                  atol = Atol, 
                  rtol = Rtol)
       
-      fit_S <- out[ , 2]
-      fit_E <- out[ , 3]
-      fit_I_symp <- out[ , 4]
-      fit_I_asymp <- out[ , 5]
+      fit_S <- out[ , "S"]
+      fit_E <- out[ , "E"]
+      fit_I_symp <- out[ , "I_symp"]
+      fit_I_asymp <- out[ , "I_asymp"]
       
       fitted_incidence  <- p_symp * fit_E * eta
       
@@ -300,7 +313,7 @@ Estimate_function_Stockholm_only_local <- function(
   Opt <- 0
   Opt <- optim(Guess, RSS, control = list(conl), hessian = TRUE)
 
-  while(Opt$convergence>0){
+  while (Opt$convergence > 0) {
     Guess <- Guesses()
     Opt <- optim(Guess, RSS, control = list(conl), hessian = TRUE)
   }
@@ -310,7 +323,7 @@ Estimate_function_Stockholm_only_local <- function(
     Guess <- Guesses()
     # choose tolerance abstol and reltol
     conl <- list(maxit = 1000, 
-                 parscale = c(0.000001, 1, 0.01), 
+                 # parscale = c(0.000001, 1, 0.01), 
                  abstol = Atol, 
                  reltol = Rtol)
     #conl <- list(maxit = 1000, parscale = c(0.000001, 1, 0.01)) 
@@ -332,8 +345,11 @@ Estimate_function_Stockholm_only_local <- function(
     
   }
   
-  Opt_par <- Opt$par
-  Opt_par <- setNames(Opt$par, Opt_par_names)
+  Opt_par_transformed <- Opt$par
+  names(Opt_par_transformed) <- Opt_par_names
+  Opt_par <- c(delta = expit(parameters["logit_delta"]),
+               epsilon = parameters["epsilon"],
+               theta = exp(parameters["theta"]))
   return(list(Observed_incidence = Incidence, 
               Population_size = N, 
               Day = Day, 
