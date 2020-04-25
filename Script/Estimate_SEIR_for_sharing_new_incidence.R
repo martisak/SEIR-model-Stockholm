@@ -365,7 +365,8 @@ p_asymp_use     <- 1 - p_symp_use
 p_lower_inf_use <- 1
 
 
-Est_par_model <- Estimate_function_Stockholm_only_local(p_symp = p_symp_use, p_lower_inf = p_lower_inf_use)
+Est_par_model <- Estimate_function_Stockholm_only_local(p_symp = p_symp_use, 
+                                                        p_lower_inf = p_lower_inf_use)
 
 
 # Days of incidence
