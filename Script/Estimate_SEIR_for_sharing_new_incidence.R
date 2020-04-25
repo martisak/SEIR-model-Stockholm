@@ -364,6 +364,7 @@ Estimate_function_Stockholm_only_local <- function(
               dayatyear = dayatyear, 
               Namedate = Namedate, 
               Optimisation = Opt, 
+              Opt_par = Opt_par,
               Infectivity = beta_peak_free, 
               Basic_reproduction = Basic_repr, 
               Initial_values = init, 
@@ -405,8 +406,7 @@ Namedate  <- Est_par_model$Namedate
 Observed_incidence <-  Est_par_model$Observed_incidence 
 Est <- Est_par_model$Optimisation
 Est
-Opt_par <- setNames(Est$par, c("delta","epsilon","theta"))
-Opt_par
+Opt_par <- Est_par_model$Opt_par
 
 # functions based on model scenario
 Basic_repr <- Est_par_model$Basic_reproduction
