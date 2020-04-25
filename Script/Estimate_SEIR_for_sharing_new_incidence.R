@@ -166,12 +166,12 @@ Estimate_function_Stockholm_only_local <- function(
   ## Daily incidence reported cases and their dates
   Incidence <- Stockholm_Data_10_april$Incidens
   Datum     <- as.Date(Stockholm_Data_10_april$Datum)
-  Day       <- Datum - as.Date("2019-12-31")
+  Day       <- as.integer(Datum - as.Date("2019-12-31"))
   
   Namedate <- seq.Date(as.Date("2020-01-01"), 
                        as.Date("2021-01-01"), 
                        by = "month")
-  dayatyear <- Namedate - as.Date("2019-12-31")
+  dayatyear <- as.integer(Namedate - as.Date("2019-12-31"))
   
     
   Opt_par_names <- c("delta", "epsilon", "theta")
@@ -190,7 +190,7 @@ Estimate_function_Stockholm_only_local <- function(
   
   ## The time-dependent infectivity rate 
   beta_peak_free <- function(t, delta, epsilon, theta){
-    t_b <- wfh_date - as.Date("2019-12-31")
+    t_b <- as.integer(wfh_date - as.Date("2019-12-31"))
     res <- ((1 - delta) / (1 + exp(epsilon * (-(t - t_b)))) + delta) * theta 
     return(res)
   }
