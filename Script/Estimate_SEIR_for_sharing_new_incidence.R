@@ -397,7 +397,7 @@ Est_par_model <- Estimate_function_Stockholm_only_local(p_symp = p_symp_use,
 # Days of incidence
 Day <- Est_par_model$Day
 
-N   <- Est_par_model$Population_size
+N <- Est_par_model$Population_size
 
 dayatyear <- Est_par_model$dayatyear
 Namedate  <- Est_par_model$Namedate 
@@ -419,7 +419,7 @@ init       <- Est_par_model$Initial_values
 
 RSS_value <- Est$value
 
-
+# Note: parameters have now been fitted on transformed scale
 H         <- Est$hessian
 sigest    <- sqrt(RSS_value/(length(Observed_incidence)-3))
 NeginvH2  <- solve(1/(2*sigest^2)*H)
@@ -439,12 +439,17 @@ RSS_value
 
 
 t <- (Day[1]):(Day[length(Day)]+14+11) # time in days
-fit <- data.frame(ode(y = init, times = t, func = SEIR_model , parms = Opt_par))
-fit_S <- fit[ , 2]
-fit_E <- fit[ , 3]
-fit_I_symp <- fit[ , 4]
-fit_I_asymp <- fit[ , 5]
-fit_R <- fit[ , 6]
+t_date <- as.Date("2019-12-31") + t
+fit <- ode(y = init, times = t, func = SEIR_model , parms = Opt_par)[ , ] %>%
+  as_tibble() %>%
+  rename(Day = time) %>%
+  mutate(Date = as.Date("2019-12-31") + Day)
+  
+fit_S <- fit$S
+fit_E <- fit$E
+fit_I_symp <- fit$I_symp
+fit_I_asymp <- fit$I_asymp
+fit_R <- fit$R
 fit_I <- fit_I_symp + fit_I_asymp
 fit_I_E <- fit_E + fit_I
 fit_cum_inf <- N - fit_S
@@ -452,7 +457,7 @@ fit_cum_inf <- N - fit_S
 
 
 ## The mean prevalence same days as the Hälsorapport Stockholmsstudien (27th March to 3rd April)
-Smittsamma         <- fit_I_symp + fit_I_asymp #+ fit_E
+Smittsamma <- fit_I_symp + fit_I_asymp #+ fit_E
 SmittsammaF <-  Smittsamma[40:47]
 mean(SmittsammaF/N)
 
