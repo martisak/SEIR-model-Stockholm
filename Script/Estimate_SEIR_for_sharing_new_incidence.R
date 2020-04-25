@@ -215,12 +215,15 @@ Estimate_function_Stockholm_only_local <- function(
     # R       <- state[5] # recovered/immune
     par <- as.list(c(state, parameters))
     with(par, {
-      dS        <- -beta_peak_free(time, delta, epsilon, theta) * S * I_symp/N - p_lower_inf*beta_peak_free(time, delta, epsilon, theta) * S * I_asymp/N
-      dE        <- beta_peak_free(time, delta, epsilon, theta) * S * I_symp/N + p_lower_inf*beta_peak_free(time, delta, epsilon, theta) * S * I_asymp/N - eta*E
-      dI_symp   <- p_symp * eta * E      - gammaD * I_symp
-      dI_asymp  <- (1 - p_symp)* eta * E - gammaD * I_asymp
-      dR        <- gammaD * (I_symp + I_asymp)
-      dx        <- c(dS, dE, dI_symp, dI_asymp, dR)
+      dS <- -beta_peak_free(time, delta, epsilon, theta) * S * I_symp / N -
+            p_lower_inf * beta_peak_free(time, delta, epsilon, theta) * S * I_asymp/N
+      dE <- beta_peak_free(time, delta, epsilon, theta) * S * I_symp / N + 
+            p_lower_inf * beta_peak_free(time, delta, epsilon, theta) * S * I_asymp/N - 
+            eta * E
+      dI_symp <- p_symp * eta * E - gammaD * I_symp
+      dI_asymp <- (1 - p_symp) * eta * E - gammaD * I_asymp
+      dR <- gammaD * (I_symp + I_asymp)
+      dx <- c(dS, dE, dI_symp, dI_asymp, dR)
       list(dx)
     }
     )
