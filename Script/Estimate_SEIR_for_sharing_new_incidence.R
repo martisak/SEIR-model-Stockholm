@@ -318,8 +318,10 @@ Estimate_function_Stockholm_only_local <- function(
     Opt <- optim(Guess, RSS, control = list(conl), hessian = TRUE)
   }
 
+  fails <- 0
   ii <- 1 
-  while(ii <= iter){
+  while (ii <= iter){
+    print(glue("Iteration {ii} / {iter}"))
     Guess <- Guesses()
     # choose tolerance abstol and reltol
     conl <- list(maxit = 1000, 
@@ -331,25 +333,28 @@ Estimate_function_Stockholm_only_local <- function(
     
     Opt2 <- optim(Guess, RSS, control = list(conl), hessian = TRUE)
    
-    if((Opt2$convergence == 0)){
-      
-      # if( ((ii / iter) * 100) %% 10 == 0){ 
+    if (Opt2$convergence == 0) {
       print(glue("{(ii / iter) * 100}% done"))
+      # if( ((ii / iter) * 100) %% 10 == 0){ 
+      
       # }
       
       ii <- ii + 1
-      if(Opt2$value < Opt$value) {
+      if (Opt2$value < Opt$value) {
         Opt <- Opt2
       }
+    } else {
+      fails <- fails + 1
+      print(glue("{fails} failed iterations so far."))
     }
     
   }
   
   Opt_par_transformed <- Opt$par
   names(Opt_par_transformed) <- Opt_par_names
-  Opt_par <- c(delta = expit(parameters["logit_delta"]),
-               epsilon = parameters["epsilon"],
-               theta = exp(parameters["theta"]))
+  Opt_par <- c(delta = expit(Opt_par_transformed["logit_delta"]),
+               epsilon = Opt_par_transformed["epsilon"],
+               theta = exp(Opt_par_transformed["log_theta"]))
   return(list(Observed_incidence = Incidence, 
               Population_size = N, 
               Day = Day, 
