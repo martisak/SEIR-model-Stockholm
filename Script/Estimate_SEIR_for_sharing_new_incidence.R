@@ -465,34 +465,69 @@ mean(SmittsammaF/N)
 
 ## Look at the estimated reported cases and fitted
 
-fitted_incidence             <- p_symp_use * fit_E * eta
-# fitted_incidence_non_report  <- (1 - p_symp_use) * fit_E * eta
+fitted_incidence <- p_symp_use * fit_E * eta
+fitted_incidence_non_report  <- (1 - p_symp_use) * fit_E * eta
 
-plot(Observed_incidence,type="o", ylab = "Reported cases", xlab ="Day")
-lines(fitted_incidence,  lwd = 2, col = "blue")
-legend("topleft", c("Observed reported cases", "Fitted reported cases"), lwd=c(1,2), pch = c(1,NA), lty =c(1,1), col = c("black","blue"))
+df_incidence <- Stockholm_Data_10_april %>% 
+  rename(Date = Datum,
+         Incidence = Incidens) %>%
+  mutate(Type = "Observed") %>%
+  bind_rows(tibble(Date = t_date,
+                   Incidence = fitted_incidence,
+                   Type = "Fitted (Reported)")) %>%
+  bind_rows(tibble(Date = t_date,
+                   Incidence = fitted_incidence_non_report,
+                   Type = "Fitted (Unreported)")) %>%
+  mutate(Day = as.integer(Date - min(Date) + 1)) %>%
+  mutate(Type = factor(Type, levels = c("Observed", 
+                                        "Fitted (Reported)",
+                                        "Fitted (Unreported)")))
+
+df_incidence %>%
+  filter(Type != "Fitted (Unreported)") %>%
+  ggplot() + 
+  geom_line(aes(x = Date, y = Incidence, color = Type, size = Type)) + 
+  geom_point(aes(x = Date, y = Incidence), 
+             data = df_incidence %>% filter(Type == "Observed"),
+             size = 2) +
+  scale_color_manual(values = c("black", "red")) +
+  scale_size_manual(values = c(0.5, 1.05)) +
+  theme_minimal()
 
 
+# Look at the estimated infectivity and basic reproductive number
 
-## Look at the estimated infectivity and basic reproductive number
-## 1 jan, 1 feb  osv
-dayatyear_march_april <- c(1, 32, 61, 61 + 31, 61 + 31 + 30, 61 + 31 + 30 + 31)
-NameDateMarchApril <- as.Date(dayatyear_march_april,origin ="2019-12-31")
+df_R0 <- fit %>% select(Day, Date) %>%
+  mutate(R0 = Basic_repr(Day, 
+                         delta = Opt_par["delta"],
+                         epsilon = Opt_par["epsilon"],  
+                         theta = Opt_par["theta"],
+                         gamma = gammaD))
 
-par(mfrow = c(1,2), mar = c(6.1, 4.1, 6.1, 5.1)) # 
-plot(c(0:150),Basic_repr(c(0:150), delta = Est$par[1], epsilon = Est$par[2],  theta = Est$par[3]  ,gamma = gammaD),type="l", ylab="R0(t)",lwd=2, 
-     main = "Estimated reproductive number",xlab="", xaxt ='n')
-abline(v=Day[1], lty = 2)
-abline(v=Day[length(Day)], lty = 2)
-abline(v=dayatyear_march_april,col = "lightgray", lty = "dotted", lwd = par("lwd"))
-axis(side = 1, at = dayatyear_march_april, label = NameDateMarchApril,las=2)
+df_infectivity <- fit %>% select(Day, Date) %>%
+  mutate(Infectivity = beta(Day, 
+                            delta = Opt_par["delta"], 
+                            epsilon = Opt_par["epsilon"],  
+                            theta = Opt_par["theta"])) 
 
-plot(c(0:150),beta(c(0:150), delta = Est$par[1], epsilon = Est$par[2],  theta = Est$par[3]),type="l", ylab="Infectivity",lwd=2, 
-     main = "Estimated infectivity",xlab="", xaxt='n')
-abline(v=Day[1], lty = 2)
-abline(v=Day[length(Day)], lty = 2)
-abline(v=dayatyear_march_april,col = "lightgray", lty = "dotted", lwd = par("lwd"))
-axis(side = 1, at = dayatyear_march_april, label = NameDateMarchApril,las=2)
+plot_R0 <- df_R0 %>%
+  ggplot() + 
+  geom_line(aes(x = Date, y = R0), size = 1.05) +
+  ylab("R0(t)") + 
+  ggtitle("Estimated reproductive number") +
+  theme_minimal()
+
+plot_infectivity <- df_infectivity %>%
+  ggplot() + 
+  geom_line(aes(x = Date, y = Infectivity), size = 1.05) +
+  ylab("Infectivity") + 
+  ggtitle("Estimated infectivity") +
+  theme_minimal()
+
+plot_R0 + plot_infectivity + plot_layout(nrow = 2)
+
+df_infectivity_R0 <- tibble(Date = Namedate) %>%
+  filter(Date < "2020-06-30")
 
 
 #-------------------------------------------------
