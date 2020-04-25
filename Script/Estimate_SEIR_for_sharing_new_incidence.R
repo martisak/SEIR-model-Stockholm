@@ -148,11 +148,11 @@ gammaD_value <- 1 / 5
 ## Tolerance for ode and optimisation. 
 ## This tolerance not always needed but better to be safe even though it takes a bit longer!
 ## For faster analysis use different tolerance or use default values.
-Atol = 1e-8
-Rtol = 1e-10
 
 Estimate_function_Stockholm_only_local <- function(p_symp = 0.5, p_lower_inf = 0.5, gammaD = gammaD_value, eta = eta_value , iter = 20){
  
+Atol <- 1e-8
+Rtol <- 1e-10
   ## Population size Stockholm
   N <- Region_population[Region_population$ARegion == "Stockholm",2]
   
