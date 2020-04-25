@@ -252,12 +252,12 @@ Estimate_function_Stockholm_only_local <- function(
   RSS <- function(parameters) {
         
     names(parameters) <- Opt_par_names
-    Dummy_infectivity <- beta_peak_free(t = c(0: 700), 
+    Dummy_infectivity <- beta_peak_free(t = c(0:700), 
                                         delta = parameters["delta"], 
                                         epsilon = parameters["epsilon"],  
                                         theta = parameters["theta"])
     # if the infectivity is negative, throw away guess
-    if(min(Dummy_infectivity) < 0) {
+    if (min(Dummy_infectivity) < 0) {
       res <- 10^12
       #print("negative infectivity")
       return(res)
@@ -309,7 +309,10 @@ Estimate_function_Stockholm_only_local <- function(
   while(ii <= iter){
     Guess <- Guesses()
     # choose tolerance abstol and reltol
-    conl <- list(maxit = 1000, parscale = c(0.000001, 1, 0.01), abstol = Atol, reltol = Rtol)
+    conl <- list(maxit = 1000, 
+                 parscale = c(0.000001, 1, 0.01), 
+                 abstol = Atol, 
+                 reltol = Rtol)
     #conl <- list(maxit = 1000, parscale = c(0.000001, 1, 0.01)) 
     #conl <- list(maxit = 1000, parscale = c(0.0001, 0.1, 0.0001)) 
     
@@ -317,10 +320,9 @@ Estimate_function_Stockholm_only_local <- function(
    
     if((Opt2$convergence == 0)){
       
-      if( ((ii/iter)*100) %% 10 == 0){ 
-        How_much_done <- (ii/iter)*100
-        print(glue("{How_much_done}% done"))
-      }
+      # if( ((ii / iter) * 100) %% 10 == 0){ 
+      print(glue("{(ii / iter) * 100}% done"))
+      # }
       
       ii <- ii + 1
       if(Opt2$value < Opt$value) {
