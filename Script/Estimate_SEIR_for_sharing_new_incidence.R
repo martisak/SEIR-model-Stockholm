@@ -161,14 +161,14 @@ expit <- function(x) {
 }
 
 ## Daily incidence reported cases and their dates
-  Incidence <- Stockholm_Data_10_april$Incidens
-  Datum     <- as.Date(Stockholm_Data_10_april$Datum)
-  Day       <- as.integer(Datum - as.Date("2019-12-31"))
-  
-  Namedate <- seq.Date(as.Date("2020-01-01"), 
-                       as.Date("2021-01-01"), 
-                       by = "month")
-  dayatyear <- as.integer(Namedate - as.Date("2019-12-31"))
+Incidence <- Stockholm_Data_10_april$Incidens
+Datum     <- as.Date(Stockholm_Data_10_april$Datum)
+Day       <- as.integer(Datum - as.Date("2019-12-31"))
+
+Namedate <- seq.Date(as.Date("2020-01-01"), 
+                     as.Date("2021-01-01"), 
+                     by = "month")
+dayatyear <- as.integer(Namedate - as.Date("2019-12-31"))
 
 Estimate_function_Stockholm_only_local <- function(
     p_symp = 0.5, 
