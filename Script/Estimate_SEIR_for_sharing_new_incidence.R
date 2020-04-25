@@ -189,13 +189,11 @@ Estimate_function_Stockholm_only_local <- function(
   }
   
   ## The time-dependent infectivity rate 
-  beta_decrease <- function(t, delta, epsilon, theta){
+  beta_peak_free <- function(t, delta, epsilon, theta){
     t_b <- wfh_date - as.Date("2019-12-31")
     res <- ((1 - delta) / (1 + exp(epsilon * (-(t - t_b)))) + delta) * theta 
     return(res)
   }
-  
-  beta_peak_free <- beta_decrease
   
   ## The time-dependent basic reproductive number
   Basic_repr <- function(t, delta, epsilon, theta, gamma) {
