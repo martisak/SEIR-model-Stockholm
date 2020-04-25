@@ -159,6 +159,16 @@ expit <- function(x) {
   1 / (1 + exp(-x))
 }
 
+## Daily incidence reported cases and their dates
+  Incidence <- Stockholm_Data_10_april$Incidens
+  Datum     <- as.Date(Stockholm_Data_10_april$Datum)
+  Day       <- as.integer(Datum - as.Date("2019-12-31"))
+  
+  Namedate <- seq.Date(as.Date("2020-01-01"), 
+                       as.Date("2021-01-01"), 
+                       by = "month")
+  dayatyear <- as.integer(Namedate - as.Date("2019-12-31"))
+
 Estimate_function_Stockholm_only_local <- function(
     p_symp = 0.5, 
     p_lower_inf = 0.5, 
@@ -172,15 +182,7 @@ Estimate_function_Stockholm_only_local <- function(
   ## Population size Stockholm
   N <- Region_population %>% filter(ARegion == "Stockholm") %>% pull(Pop)
   
-  ## Daily incidence reported cases and their dates
-  Incidence <- Stockholm_Data_10_april$Incidens
-  Datum     <- as.Date(Stockholm_Data_10_april$Datum)
-  Day       <- as.integer(Datum - as.Date("2019-12-31"))
   
-  Namedate <- seq.Date(as.Date("2020-01-01"), 
-                       as.Date("2021-01-01"), 
-                       by = "month")
-  dayatyear <- as.integer(Namedate - as.Date("2019-12-31"))
   
     
   Opt_par_names <- c("logit_delta", "epsilon", "log_theta")
