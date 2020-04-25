@@ -197,10 +197,11 @@ Estimate_function_Stockholm_only_local <- function(
   beta.peak.free <- beta_decrease
   
   ## The time-dependent basic reproductive number
-  Basic_repr<- function(t, delta, epsilon, theta, gamma){ 
-    res <- p_symp * beta.peak.free(t, delta, epsilon, theta) / gamma + (1 - p_symp) * p_lower_inf * beta.peak.free(t, delta, epsilon, theta) / gamma
+  Basic_repr<- function(t, delta, epsilon, theta, gamma) {
+    a <- p_symp * beta_peak_free(t, delta, epsilon, theta)
+    b <- (1 - p_symp) * p_lower_inf * beta_peak_free(t, delta, epsilon, theta)
+    res <- (a + b) / gamma
     return(res)
-  
   }
  
   ## The SEIR model. 
