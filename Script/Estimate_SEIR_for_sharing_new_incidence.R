@@ -173,19 +173,18 @@ Estimate_function_Stockholm_only_local <- function(
   dayatyear <- Namedate - as.Date("2019-12-31")
   
     
-  Opt_par_names <- c("delta","epsilon","theta")
+  Opt_par_names <- c("delta", "epsilon", "theta")
     
   ## Function to create guesses for the optimisation
   ## The range of the guesses can be changed, 
   ## these are good for the specific dates and parameter combinations of p_symp and p_lower_inf
   Guesses <- function(){ 
     
-    u_d <- runif(1, 0.05, 0.6) # guess for delta 
-    u_e <- runif(1,-0.6, 0)    # guess for epsilon
-    u_t <-  runif(1, 0, 15)    # guess for theta
+    u_d <- runif(1, 0.05,  0.6) # guess for delta 
+    u_e <- runif(1, -0.6, 0)    # guess for epsilon
+    u_t <- runif(1, 0, 15)      # guess for theta
 
     return(c(u_d, u_e, u_t))
-    
   }
   
   ## The time-dependent infectivity rate 
