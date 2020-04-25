@@ -165,11 +165,12 @@ Estimate_function_Stockholm_only_local <- function(
   ## Daily incidence reported cases and their dates
   Incidence <- Stockholm_Data_10_april$Incidens
   Datum     <- as.Date(Stockholm_Data_10_april$Datum)
-  Day       <- as.numeric(Datum) - as.numeric(as.Date("2019-12-31"))
+  Day       <- Datum - as.Date("2019-12-31")
   
-  dayatmonth <- c(1,31,29,31,30,31,30,31,31,30,31,30,31)
-  dayatyear <- cumsum(dayatmonth)
-  Namedate <- as.Date(dayatyear, origin = "2019-12-31")
+  Namedate <- seq.Date(as.Date("2020-01-01"), 
+                       as.Date("2021-01-01"), 
+                       by = "month")
+  dayatyear <- Namedate - as.Date("2019-12-31")
   
     
   Opt_par_names <- c("delta","epsilon","theta")
