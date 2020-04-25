@@ -160,7 +160,7 @@ Estimate_function_Stockholm_only_local <- function(
     wfh_date = as.Date("2020-03-16")) {
   
   ## Population size Stockholm
-  N <- Region_population[Region_population$ARegion == "Stockholm",2]
+  N <- Region_population %>% filter(ARegion == "Stockholm") %>% pull(Pop)
   
   ## Daily incidence reported cases and their dates
   Incidence <- Stockholm_Data_10_april$Incidens
