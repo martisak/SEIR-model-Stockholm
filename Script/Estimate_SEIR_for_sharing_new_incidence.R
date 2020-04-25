@@ -204,9 +204,10 @@ Estimate_function_Stockholm_only_local <- function(
     return(res)
   }
  
-  ## The SEIR model. 
-  ## Note that the rate of going from latency to infectious is denoted eta here, rho in the report
-  seir.model.asymptomatics <- function(time, state, parameters) {
+  # The SEIR model. 
+  # Note that the rate of going from latency to infectious is denoted eta here, 
+  # rho in the report
+  seir_model_asymptomatics <- function(time, state, parameters) {
     # S       <- state[1] # susceptibles
     # E       <- state[2] # latent/exposed but not infectious
     # I_symp  <- state[3] # infected who get reported
@@ -231,7 +232,7 @@ Estimate_function_Stockholm_only_local <- function(
   # init <- c(S = N - Incidence[1]*(1 + (1-p_symp)/p_symp), E = 0, I_symp = Incidence[1], I_asymp = Incidence[1]*(1-p_symp)/p_symp , R = 0)
   init <- c(S = N-Incidence[1],E = 0, I_symp = Incidence[1], I_asymp = 0 , R = 0)
   
-  model <- seir.model.asymptomatics
+  model <- seir_model_asymptomatics
   
   RSS <- function(parameters) {
         
