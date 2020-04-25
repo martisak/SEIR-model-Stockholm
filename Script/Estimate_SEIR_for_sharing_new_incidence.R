@@ -157,7 +157,8 @@ Estimate_function_Stockholm_only_local <- function(
     gammaD = gammaD_value, 
     eta = eta_value, 
     iter = 20,
-    wfh_date = as.Date("2020-03-16")) {
+    wfh_date = as.Date("2020-03-16"),
+    non_reported = FALSE) {
   
   ## Population size Stockholm
   N <- Region_population %>% filter(ARegion == "Stockholm") %>% pull(Pop)
@@ -229,11 +230,24 @@ Estimate_function_Stockholm_only_local <- function(
     )
   }
   
-  ## assumption on initial number of infected. 
-  ## In our main analysis we start with 1 infectious individual at t_0 = 17th Ferbruary. You can instead choose the commented one 
-  ## if you want to try with non-reported cases as well. 
-  # init <- c(S = N - Incidence[1]*(1 + (1-p_symp)/p_symp), E = 0, I_symp = Incidence[1], I_asymp = Incidence[1]*(1-p_symp)/p_symp , R = 0)
-  init <- c(S = N-Incidence[1],E = 0, I_symp = Incidence[1], I_asymp = 0 , R = 0)
+  # Assumption on initial number of infected:
+  # In our main analysis we start with 1 infectious individual at 
+  # t_0 = 2020-02-17. You can instead choose the commented one if you want to 
+  # try with non-reported cases as well. 
+  
+  if (non_reported) {
+    init <- c(S = N - Incidence[1] * (1 + (1 - p_symp) / p_symp), 
+              E = 0, 
+              I_symp = Incidence[1], 
+              I_asymp = Incidence[1] * (1 - p_symp) / p_symp, 
+              R = 0)
+  } else {
+    init <- c(S = N - Incidence[1],
+              E = 0, 
+              I_symp = Incidence[1], 
+              I_asymp = 0, 
+              R = 0)
+  }
   
   model <- seir_model_asymptomatics
   
