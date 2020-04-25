@@ -254,19 +254,25 @@ Estimate_function_Stockholm_only_local <- function(
   RSS <- function(parameters) {
         
     names(parameters) <- Opt_par_names
-    Dummy_infectivity <- beta_peak_free(t = c(0: 700), delta = parameters[1], epsilon = parameters[2],  theta = parameters[3])
+    Dummy_infectivity <- beta_peak_free(t = c(0: 700), 
+                                        delta = parameters["delta"], 
+                                        epsilon = parameters["epsilon"],  
+                                        theta = parameters["theta"])
     # if the infectivity is negative, throw away guess
-      if(min(Dummy_infectivity) < 0 ){
+    if(min(Dummy_infectivity) < 0) {
       res <- 10^12
       #print("negative infectivity")
       return(res)
-    }else{
+    } else {
       # choose tolerance atol and rtol
       #out <- ode(y = init, times = Day, func = model, parms = parameters)
-      out <- ode(y = init, times = Day, func = model, parms = parameters, atol = Atol, rtol = Rtol)
+      out <- ode(y = init, 
+                 times = Day, 
+                 func = model, 
+                 parms = parameters, 
+                 atol = Atol, 
+                 rtol = Rtol)
       
-      
-          
       fit_S <- out[ , 2]
       fit_E <- out[ , 3]
       fit_I_symp <- out[ , 4]
@@ -274,8 +280,13 @@ Estimate_function_Stockholm_only_local <- function(
       
       fitted_incidence  <- p_symp * fit_E * eta
       
-      ## For trancparacy, the old incorrect incidence was expressed as:
-      #fitted_incidence  <- beta_peak_free(out[,1], delta = parameters[1], epsilon = parameters[2],  theta = parameters[3]) * fit_S * fit_I_symp/N  
+      # For transparency, the old incorrect incidence was expressed as:
+      
+      # fitted_incidence  <- beta_peak_free(
+      #   out[,1], 
+      #   delta = parameters[1], 
+      #   epsilon = parameters[2], 
+      #   theta = parameters[3]) * fit_S * fit_I_symp/N
       
       return(sum((Incidence - fitted_incidence)^2))
     }
@@ -292,15 +303,12 @@ Estimate_function_Stockholm_only_local <- function(
   Opt <- optim(Guess, RSS, control = list(conl), hessian = TRUE)
 
   while(Opt$convergence>0){
-    
     Guess <- Guesses()
     Opt <- optim(Guess, RSS, control = list(conl), hessian = TRUE)
-
   }
 
-  i = 1 
-  
-  while(i <= iter){
+  ii <- 1 
+  while(ii <= iter){
     Guess <- Guesses()
     # choose tolerance abstol and reltol
     conl <- list(maxit = 1000, parscale = c(0.000001, 1, 0.01), abstol = Atol, reltol = Rtol)
@@ -311,17 +319,18 @@ Estimate_function_Stockholm_only_local <- function(
    
     if((Opt2$convergence == 0)){
       
-      if( ((i/iter)*100) %% 10 == 0){ 
-        How_much_done <- (i/iter)*100
-        print(paste(How_much_done,"% done", sep=""))
+      if( ((ii/iter)*100) %% 10 == 0){ 
+        How_much_done <- (ii/iter)*100
+        print(glue("{How_much_done}% done"))
       }
       
-      i = i + 1
-      if(Opt2$value < Opt$value){Opt <- Opt2}
+      ii <- ii + 1
+      if(Opt2$value < Opt$value) {
+        Opt <- Opt2
+      }
     }
     
   }
-  
   
   Opt_par <- Opt$par
   Opt_par <- setNames(Opt$par, Opt_par_names)
