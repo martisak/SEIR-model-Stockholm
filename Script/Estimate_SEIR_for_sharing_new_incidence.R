@@ -194,7 +194,7 @@ Estimate_function_Stockholm_only_local <- function(
     return(res)
   }
   
-  beta.peak.free <- beta_decrease
+  beta_peak_free <- beta_decrease
   
   ## The time-dependent basic reproductive number
   Basic_repr<- function(t, delta, epsilon, theta, gamma) {
@@ -214,8 +214,8 @@ Estimate_function_Stockholm_only_local <- function(
     # R       <- state[5] # recovered/immune
     par <- as.list(c(state, parameters))
     with(par, {
-      dS        <- -beta.peak.free(time, delta, epsilon, theta) * S * I_symp/N - p_lower_inf*beta.peak.free(time, delta, epsilon, theta) * S * I_asymp/N
-      dE        <- beta.peak.free(time, delta, epsilon, theta) * S * I_symp/N + p_lower_inf*beta.peak.free(time, delta, epsilon, theta) * S * I_asymp/N - eta*E
+      dS        <- -beta_peak_free(time, delta, epsilon, theta) * S * I_symp/N - p_lower_inf*beta_peak_free(time, delta, epsilon, theta) * S * I_asymp/N
+      dE        <- beta_peak_free(time, delta, epsilon, theta) * S * I_symp/N + p_lower_inf*beta_peak_free(time, delta, epsilon, theta) * S * I_asymp/N - eta*E
       dI_symp   <- p_symp * eta * E      - gammaD * I_symp
       dI_asymp  <- (1 - p_symp)* eta * E - gammaD * I_asymp
       dR        <- gammaD * (I_symp + I_asymp)
@@ -236,7 +236,7 @@ Estimate_function_Stockholm_only_local <- function(
   RSS <- function(parameters) {
         
     names(parameters) <- Opt_par_names
-    Dummy_infectivity <- beta.peak.free(t = c(0: 700), delta = parameters[1], epsilon = parameters[2],  theta = parameters[3])
+    Dummy_infectivity <- beta_peak_free(t = c(0: 700), delta = parameters[1], epsilon = parameters[2],  theta = parameters[3])
     # if the infectivity is negative, throw away guess
       if(min(Dummy_infectivity) < 0 ){
       res <- 10^12
@@ -257,7 +257,7 @@ Estimate_function_Stockholm_only_local <- function(
       fitted_incidence  <- p_symp * fit_E * eta
       
       ## For trancparacy, the old incorrect incidence was expressed as:
-      #fitted_incidence  <- beta.peak.free(out[,1], delta = parameters[1], epsilon = parameters[2],  theta = parameters[3]) * fit_S * fit_I_symp/N  
+      #fitted_incidence  <- beta_peak_free(out[,1], delta = parameters[1], epsilon = parameters[2],  theta = parameters[3]) * fit_S * fit_I_symp/N  
       
       return(sum((Incidence - fitted_incidence)^2))
     }
@@ -307,7 +307,16 @@ Estimate_function_Stockholm_only_local <- function(
   
   Opt_par <- Opt$par
   Opt_par <- setNames(Opt$par, Opt_par_names)
-  return(list(Observed_incidence = Incidence, Population_size = N, Day = Day, dayatyear = dayatyear, Namedate = Namedate, Optimisation = Opt, Infectivity = beta.peak.free, Basic_reproduction = Basic_repr, Initial_values = init, SEIR_model = model))
+  return(list(Observed_incidence = Incidence, 
+              Population_size = N, 
+              Day = Day, 
+              dayatyear = dayatyear, 
+              Namedate = Namedate, 
+              Optimisation = Opt, 
+              Infectivity = beta_peak_free, 
+              Basic_reproduction = Basic_repr, 
+              Initial_values = init, 
+              SEIR_model = model))
 }
 
 
