@@ -536,56 +536,62 @@ df_infectivity_R0 <- tibble(Date = Namedate) %>%
 
 
 ## To create bootstrap CI
-CI_level_05 <- 0.025
+CI_level_05 <- 0.05 / 2
 
-delta_high    <- qnorm(1-CI_level_05, mean = Opt_par[1], sd = sdParams[1], lower.tail = TRUE, log.p = FALSE)
-epsilon_high  <- qnorm(1-CI_level_05, mean = Opt_par[2], sd = sdParams[2], lower.tail = TRUE, log.p = FALSE)
-theta_high    <- qnorm(1-CI_level_05, mean = Opt_par[3], sd = sdParams[3], lower.tail = TRUE, log.p = FALSE)
+delta_ci <- expit(qnorm(c(CI_level_05, 1 - CI_level_05), 
+                        mean = Est$par[1], sd = sdParams[1], 
+                        lower.tail = TRUE, log.p = FALSE))
+epsilon_ci <- qnorm(c(CI_level_05, 1 - CI_level_05), 
+                     mean = Est$par[2], sd = sdParams[2], 
+                     lower.tail = TRUE, log.p = FALSE)
+theta_high <- exp(qnorm(c(CI_level_05, 1 - CI_level_05),
+                        mean = Est$par[3], sd = sdParams[3], 
+                        lower.tail = TRUE, log.p = FALSE))
 
+n_sims <- 1000
+par_sims <- MASS::mvrnorm(n = n_sims,
+                          mu = Est$par,
+                          Sigma = NeginvH2)
+par_sims[, 1] <- expit(par_sims[, 1])
+par_sims[, 3] <- exp(par_sims[, 3])
 
-delta_low     <- max(0,qnorm(CI_level_05, mean = Opt_par[1], sd = sdParams[1], lower.tail = TRUE, log.p = FALSE))
-epsilon_low   <- qnorm(CI_level_05, mean = Opt_par[2], sd = sdParams[2], lower.tail = TRUE, log.p = FALSE)
-theta_low     <- qnorm(CI_level_05, mean = Opt_par[3], sd = sdParams[3], lower.tail = TRUE, log.p = FALSE)
+R0.v.Dag1 <- numeric(n_sims)
+R0.v.DagSista <- numeric(n_sims)
 
-Opt_par
-delta_high
-delta_low
+R0_sims <- matrix(NA, nrow = n_sims, ncol = nrow(fit))
 
-epsilon_high
-epsilon_low
-
-theta_high
-theta_low
-
-
-p.v        <- rnorm(1000, mean = Opt_par[1], sd = sdParams[1]) # delta.v
-p.v[which(p.v<0)] <- 0
-epsilon.v  <- rnorm(1000,mean = Opt_par[2], sd = sdParams[2])
-theta.v    <- rnorm(1000,mean = Opt_par[3], sd = sdParams[3])
-
-
-R0.v.Dag1 <- c()
-R0.v.DagSista <- c()
-for(i in 1:length(p.v)){
-  
-  R0.v.Dag1[i]      <- Basic_repr(Day[1], delta = p.v[i], epsilon = epsilon.v[i], theta = theta.v[i], gamma = gammaD) 
-  R0.v.DagSista[i]  <- Basic_repr(Day[length(Day)], delta = p.v[i], epsilon = epsilon.v[i], theta = theta.v[i], gamma = gammaD) 
+for (ii in 1:n_sims) {
+  R0_sims[ii, ] <- map(fit$Day, 
+                       function(x) Basic_repr(x, 
+                                              delta = par_sims[ii, 1], 
+                                              epsilon = par_sims[ii, 2], 
+                                              theta = par_sims[ii, 3], 
+                                              gamma = gammaD)) %>% unlist()
 }
 
+R0_sims_q <- apply(
+    R0_sims, 2, 
+    function(x) quantile(x, c(0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975))) %>% 
+  t()
+# names(R0_sims_q) <- attributes(R0_sims_q)$dimnames[[2]]
+R0_sims_df <- fit %>% select(Day, Date) %>%
+  bind_cols(R0_sims_q %>% as_tibble())
 
+R0_sims_df %>%
+  ggplot(aes(x = Date)) +
+  geom_line(aes(y = `50%`), size = 1.05) +
+  geom_ribbon(aes(ymin = `25%`, ymax = `75%`), alpha = 0.5) +
+  geom_ribbon(aes(ymin = `5%`, ymax = `95%`), alpha = 0.25) +
+  geom_ribbon(aes(ymin = `2.5%`, ymax = `97.5%`), alpha = 0.125) +
+  xlab("") + ylab("R0(t)") +
+  ggtitle("Estimated reproductive number",
+          glue("Black line shows median estimated R0(t),\n",
+               "shaded regions show 50%, 90% and 95% uncertainty intervals ",
+               "in order from darkest to lightest.")) +
+  theme_minimal()
 
-CRI(R0.v.Dag1, level= 0.95)
-CRI(R0.v.DagSista, level= 0.95)
-
-R0_low  <- c(CRI_95_low(R0.v.Dag1), CRI_95_low(R0.v.DagSista))
-R0_high <- c(CRI_95_up(R0.v.Dag1), CRI_95_up(R0.v.DagSista))
-
-R0_Mean <- Basic_repr(Day, delta = Est$par[1], epsilon = Est$par[2],  theta = Est$par[3]  ,gamma = gammaD)
-
-
-
-R0_Mean[1]
-R0_Mean[length(Day)]
+R0_sims <- tibble(iteration = rep(1:n_sims, each = nrow(fit)),
+                  R0 = R0_sims %>% as.vector())
 
 
 #############################################
