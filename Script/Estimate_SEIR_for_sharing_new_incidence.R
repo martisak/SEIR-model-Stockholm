@@ -142,8 +142,8 @@ Region_population <- Region_population %>%
 
 
 
-eta_value    <- 1/5.1
-gammaD_value <- 1/5
+eta_value    <- 1 / 5.1
+gammaD_value <- 1 / 5
 
 ## Tolerance for ode and optimisation. 
 ## This tolerance not always needed but better to be safe even though it takes a bit longer!
