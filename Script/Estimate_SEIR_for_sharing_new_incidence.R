@@ -510,9 +510,9 @@ delta_ci <- expit(qnorm(c(CI_level_05, 1 - CI_level_05),
 epsilon_ci <- qnorm(c(CI_level_05, 1 - CI_level_05), 
                      mean = Est$par[2], sd = sdParams[2], 
                      lower.tail = TRUE, log.p = FALSE)
-theta_high <- exp(qnorm(c(CI_level_05, 1 - CI_level_05),
-                        mean = Est$par[3], sd = sdParams[3], 
-                        lower.tail = TRUE, log.p = FALSE))
+theta_ci <- exp(qnorm(c(CI_level_05, 1 - CI_level_05),
+                      mean = Est$par[3], sd = sdParams[3], 
+                      lower.tail = TRUE, log.p = FALSE))
 
 n_sims <- 1000
 par_sims <- MASS::mvrnorm(n = n_sims,
