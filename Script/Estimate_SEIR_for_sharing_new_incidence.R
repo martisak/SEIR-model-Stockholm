@@ -520,6 +520,7 @@ par_sims <- MASS::mvrnorm(n = n_sims,
                           Sigma = NeginvH2)
 par_sims[, 1] <- expit(par_sims[, 1])
 par_sims[, 3] <- exp(par_sims[, 3])
+colnames(par_sims) <- names(Opt_par)
 
 R0.v.Dag1 <- numeric(n_sims)
 R0.v.DagSista <- numeric(n_sims)
