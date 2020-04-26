@@ -42,7 +42,9 @@ library(tidyverse)
 library(glue)
 library(rebus)
 library(patchwork)
+library(furrr)
 
+plan(multiprocess)
 
 #-----------------------------------------------------------------------------------
 # Paths
@@ -183,15 +185,12 @@ Estimate_function_Stockholm_only_local <- function(
   ## Population size Stockholm
   N <- Region_population %>% filter(ARegion == "Stockholm") %>% pull(Pop)
   
-  
-  
-    
   Opt_par_names <- c("logit_delta", "epsilon", "log_theta")
     
   ## Function to create guesses for the optimisation
   ## The range of the guesses can be changed, 
   ## these are good for the specific dates and parameter combinations of p_symp and p_lower_inf
-  Guesses <- function(){ 
+  Guesses <- function() { 
     
     u_d <- logit(runif(1, 0.05, 0.6)) # guess for logit_delta 
     u_e <- runif(1, -0.6, 0)    # guess for epsilon
@@ -305,59 +304,29 @@ Estimate_function_Stockholm_only_local <- function(
       return(sum((Incidence - fitted_incidence)^2))
     }
   }
-  
-
-
   print("Optimisation initialised")
-  Guess <- Guesses()
-  #conl <- list(maxit = 1000)
-  conl <- list(maxit = 1000, abstol = Atol, reltol = Rtol)
   
-  Opt <- 0
-  Opt <- optim(Guess, RSS, control = list(conl), hessian = TRUE)
-
-  while (Opt$convergence > 0) {
+  fitter <- function(x) {
     Guess <- Guesses()
+    conl <- list(maxit = 1000, abstol = Atol, reltol = Rtol)
     Opt <- optim(Guess, RSS, control = list(conl), hessian = TRUE)
-  }
 
-  fails <- 0
-  ii <- 1 
-  while (ii <= iter){
-    print(glue("Iteration {ii} / {iter}"))
-    Guess <- Guesses()
-    # choose tolerance abstol and reltol
-    conl <- list(maxit = 1000, 
-                 # parscale = c(0.000001, 1, 0.01), 
-                 abstol = Atol, 
-                 reltol = Rtol)
-    #conl <- list(maxit = 1000, parscale = c(0.000001, 1, 0.01)) 
-    #conl <- list(maxit = 1000, parscale = c(0.0001, 0.1, 0.0001)) 
-    
-    Opt2 <- optim(Guess, RSS, control = list(conl), hessian = TRUE)
-   
-    if (Opt2$convergence == 0) {
-      print(glue("{(ii / iter) * 100}% done"))
-      # if( ((ii / iter) * 100) %% 10 == 0){ 
-      
-      # }
-      
-      ii <- ii + 1
-      if (Opt2$value < Opt$value) {
-        Opt <- Opt2
-      }
-    } else {
-      fails <- fails + 1
-      print(glue("{fails} failed iterations so far."))
+    while (Opt$convergence > 0) {
+      Guess <- Guesses()
+      Opt <- optim(Guess, RSS, control = list(conl), hessian = TRUE)
     }
-    
+    return(Opt)
   }
+  
+  fits <- furrr::future_map(1:iter, fitter, .progress = TRUE)
+  best_index <- purrr::map(fits, ~ .x$value) %>% unlist() %>% which.min()
+  Opt <- fits[[best_index]]
   
   Opt_par_transformed <- Opt$par
   names(Opt_par_transformed) <- Opt_par_names
-  Opt_par <- c(delta = expit(Opt_par_transformed["logit_delta"]),
-               epsilon = Opt_par_transformed["epsilon"],
-               theta = exp(Opt_par_transformed["log_theta"]))
+  Opt_par <- c(delta = unname(expit(Opt_par_transformed["logit_delta"])),
+               epsilon = unname(Opt_par_transformed["epsilon"]),
+               theta = unname(exp(Opt_par_transformed["log_theta"])))
   return(list(Observed_incidence = Incidence, 
               Population_size = N, 
               Day = Day, 
@@ -525,9 +494,6 @@ plot_infectivity <- df_infectivity %>%
   theme_minimal()
 
 plot_R0 + plot_infectivity + plot_layout(nrow = 2)
-
-df_infectivity_R0 <- tibble(Date = Namedate) %>%
-  filter(Date < "2020-06-30")
 
 
 #-------------------------------------------------
