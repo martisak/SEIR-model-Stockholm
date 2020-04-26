@@ -524,24 +524,30 @@ par_sims[, 3] <- exp(par_sims[, 3])
 R0.v.Dag1 <- numeric(n_sims)
 R0.v.DagSista <- numeric(n_sims)
 
-R0_sims <- matrix(NA, nrow = n_sims, ncol = nrow(fit))
 
-for (ii in 1:n_sims) {
-  R0_sims[ii, ] <- map(fit$Day, 
-                       function(x) Basic_repr(x, 
-                                              delta = par_sims[ii, 1], 
-                                              epsilon = par_sims[ii, 2], 
-                                              theta = par_sims[ii, 3], 
-                                              gamma = gammaD)) %>% unlist()
-}
 
-R0_sims_q <- apply(
-    R0_sims, 2, 
-    function(x) quantile(x, c(0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975))) %>% 
-  t()
-# names(R0_sims_q) <- attributes(R0_sims_q)$dimnames[[2]]
-R0_sims_df <- fit %>% select(Day, Date) %>%
-  bind_cols(R0_sims_q %>% as_tibble())
+R0_sims <- furrr::future_map_dfr(1:n_sims, function(n) {
+  tibble(iteration = n,
+         Day = fit$Day,
+         Date = fit$Date,
+         R0 = map(fit$Day, 
+                  function(x) Basic_repr(x, 
+                                         delta = par_sims[n, 1], 
+                                         epsilon = par_sims[n, 2], 
+                                         theta = par_sims[n, 3], 
+                                         gamma = gammaD)) %>% unlist())
+})
+
+# Creds: https://tbradley1013.github.io/2018/10/01/calculating-quantiles-for-groups-with-dplyr-summarize-and-purrr-partial/
+p <- c(0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975)
+p_names <- map_chr(p, ~paste0(.x*100, "%"))
+p_funs <- map(p, ~partial(quantile, probs = .x, na.rm = TRUE)) %>% 
+  set_names(nm = p_names)
+R0_sims_df <- R0_sims %>% 
+  select(-iteration) %>% 
+  group_by(Day, Date) %>% 
+  summarize_at(vars(R0), funs(!!!p_funs))
+
 
 R0_sims_df %>%
   ggplot(aes(x = Date)) +
@@ -555,9 +561,6 @@ R0_sims_df %>%
                "shaded regions show 50%, 90% and 95% uncertainty intervals ",
                "in order from darkest to lightest.")) +
   theme_minimal()
-
-R0_sims <- tibble(iteration = rep(1:n_sims, each = nrow(fit)),
-                  R0 = R0_sims %>% as.vector())
 
 
 #############################################
