@@ -393,7 +393,7 @@ H         <- Est$hessian
 sigest    <- sqrt(RSS_value/(length(Observed_incidence)-3))
 NeginvH2  <- solve(1/(2*sigest^2)*H)
 sdParams  <- sqrt(diag(NeginvH2))
-sdParams
+names(sdParams) <- names(Opt_par)
 
 options("scipen"=100, "digits"=4)
 #default options("scipen"=0, "digits"=7)
@@ -568,8 +568,18 @@ R0_sims_df %>%
 #############################################
 
 
-res_param        <- c(round(c(p_asymp_use, p_lower_inf_use),digits=3), round(mean(SmittsammaF / N), digits = 5), round(c(RSS_value, Est$par[1], sdParams[1], Est$par[2], sdParams[2], Est$par[3], sdParams[3]), digits = 3))
-names(res_param) <- c("p_0", "q_0","27 mars - 3 april", "RSS" ,"delta", "s.e.", "epsilon", "s.e.", "theta", "s.e.")
+res_param <- c(p_0                 = p_asymp_use,
+               q_0                 = p_asymp_use,
+               `27 mars - 3 april` = mean(SmittsammaF / N),
+               RSS                 = RSS_value,
+               delta               = unname(Opt_par["delta"]),
+               "s.e."              = unname(sdParams["delta"]),
+               epsilon             = unname(Opt_par["epsilon"]),
+               "s.e."              = unname(sdParams["epsilon"]),
+               theta               = unname(Opt_par["theta"]),
+               "s.e."              = unname(Opt_par["theta"]))
+# Round afterwards
+res_param <- map2_dbl(res_param, c(3, 3, 5, rep(3, 7)), round)
 
 CIp       <- paste("[",round(delta_low,digits = 3), ", ", round(delta_high, digits = 3),"]", sep="")
 CIepsilon <- paste("[",round(epsilon_low,digits = 3), ", ",round(epsilon_high, digits = 3),"]", sep="")
