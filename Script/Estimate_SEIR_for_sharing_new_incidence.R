@@ -526,18 +526,27 @@ R0.v.Dag1 <- numeric(n_sims)
 R0.v.DagSista <- numeric(n_sims)
 
 
-
 R0_sims <- furrr::future_map_dfr(1:n_sims, function(n) {
-  tibble(iteration = n,
-         Day = fit$Day,
-         Date = fit$Date,
-         R0 = map(fit$Day, 
-                  function(x) Basic_repr(x, 
-                                         delta = par_sims[n, 1], 
-                                         epsilon = par_sims[n, 2], 
-                                         theta = par_sims[n, 3], 
-                                         gamma = gammaD)) %>% unlist())
-})
+  df1 <- tibble(
+    iteration = n,
+    Day = fit$Day,
+    Date = fit$Date,
+    R0 = map(fit$Day, 
+             function(x) Basic_repr(x, 
+                                    delta = par_sims[n, "delta"], 
+                                    epsilon = par_sims[n, "epsilon"], 
+                                    theta = par_sims[n, "theta"], 
+                                    gamma = gammaD)) %>% unlist())
+  df2 <- ode(y = init, 
+             times = fit$Day, 
+             func = SEIR_model, 
+             parms = par_sims[n, ])[ , ] %>%
+    as_tibble() %>%
+    rename(Day = time) %>%
+    mutate(Date = as.Date("2019-12-31") + Day)
+  
+  return(df1 %>% full_join(df2, by = c("Day", "Date")))
+}, .progress = TRUE)
 
 # Creds: https://tbradley1013.github.io/2018/10/01/calculating-quantiles-for-groups-with-dplyr-summarize-and-purrr-partial/
 p <- c(0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975)
