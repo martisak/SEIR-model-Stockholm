@@ -526,7 +526,7 @@ R0.v.Dag1 <- numeric(n_sims)
 R0.v.DagSista <- numeric(n_sims)
 
 
-R0_sims <- furrr::future_map_dfr(1:n_sims, function(n) {
+sims_df_raw <- furrr::future_map_dfr(1:n_sims, function(n) {
   df1 <- tibble(
     iteration = n,
     Day = fit$Day,
@@ -553,13 +553,15 @@ p <- c(0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975)
 p_names <- map_chr(p, ~paste0(.x*100, "%"))
 p_funs <- map(p, ~partial(quantile, probs = .x, na.rm = TRUE)) %>% 
   set_names(nm = p_names)
-R0_sims_df <- R0_sims %>% 
+sims_df <- sims_df_raw %>% 
+  pivot_longer(cols = c(R0, S, E, I_symp, I_asymp, R)) %>%
   select(-iteration) %>% 
-  group_by(Day, Date) %>% 
-  summarize_at(vars(R0), funs(!!!p_funs))
+  group_by(Day, Date, name) %>% 
+  summarize_at(vars(everything()), p_funs)
 
 
-R0_sims_df %>%
+sims_df %>%
+  filter(name == "R0") %>%
   ggplot(aes(x = Date)) +
   geom_line(aes(y = `50%`), size = 1.05) +
   geom_ribbon(aes(ymin = `25%`, ymax = `75%`), alpha = 0.5) +
@@ -572,6 +574,18 @@ R0_sims_df %>%
                "in order from darkest to lightest.")) +
   theme_minimal()
 
+#27th March to 3rd April)
+infectious_report <- sims_df_raw %>%
+  filter(Date >= "2020-03-27", Date <= "2020-04-03") %>%
+  group_by(iteration) %>%
+  summarize(infectious = mean(I_symp + I_asymp) / N) %>%
+  summarize(mean_infectious = mean(infectious),
+            median_infectious = median(infectious),
+            sd_infectious = sd(infectious),
+            `2.5%` = quantile(infectious, 0.025),
+            `97.5%` = quantile(infectious, 0.975))
+  
+
 
 #############################################
 ## save estimated parameters and their SE  ##
@@ -581,6 +595,7 @@ R0_sims_df %>%
 res_param <- c(p_0                 = p_asymp_use,
                q_0                 = p_asymp_use,
                `27 mars - 3 april` = mean(SmittsammaF / N),
+               "s.e."              = infectious_report$sd_infectious,
                RSS                 = RSS_value,
                delta               = unname(Opt_par["delta"]),
                "s.e."              = unname(sdParams["delta"]),
@@ -589,15 +604,16 @@ res_param <- c(p_0                 = p_asymp_use,
                theta               = unname(Opt_par["theta"]),
                "s.e."              = unname(Opt_par["theta"]))
 # Round afterwards
-res_param <- map2_dbl(res_param, c(3, 3, 5, rep(3, 7)), round)
+res_param <- map2_dbl(res_param, c(3, 3, 5, 4, rep(3, 7)), round)
 
 CIp       <- glue("[{round(delta_ci[1], digits = 3)}, {round(delta_ci[2], digits = 3)}]")
 CIepsilon <- glue("[{round(epsilon_ci[1], digits = 3)}, {round(epsilon_ci[2], digits = 3)}]")
 CItheta   <- glue("[{round(theta_ci[1], digits = 3)}, {round(theta_ci[2], digits = 3)}]")
+CIsmittsam <- glue("[{round(infectious_report$`2.5%`, digits = 4)}, {round(infectious_report$`97.5%`, digits = 4)}]")
 
-CI_param <- c("", "", "", "", CIp, "", CIepsilon, "", CItheta, "")
+CI_param <- c("", "", CIsmittsam, "", "", CIp, "", CIepsilon, "", CItheta, "")
 
-MAT_para <- matrix(c(res_param,CI_param),ncol = 10, nrow = 2, byrow = TRUE)
+MAT_para <- matrix(c(res_param,CI_param), ncol = length(res_param), nrow = 2, byrow = TRUE)
 
 df.res <- as.data.frame(MAT_para)
 colnames(df.res) <- names(res_param)
