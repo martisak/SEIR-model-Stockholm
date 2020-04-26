@@ -591,9 +591,9 @@ res_param <- c(p_0                 = p_asymp_use,
 # Round afterwards
 res_param <- map2_dbl(res_param, c(3, 3, 5, rep(3, 7)), round)
 
-CIp       <- paste("[",round(delta_low,digits = 3), ", ", round(delta_high, digits = 3),"]", sep="")
-CIepsilon <- paste("[",round(epsilon_low,digits = 3), ", ",round(epsilon_high, digits = 3),"]", sep="")
-CItheta   <- paste("[",round(theta_low,digits = 3), ", ",round(theta_high, digits = 3),"]", sep="")
+CIp       <- glue("[{round(delta_ci[1], digits = 3)}, {round(delta_ci[2], digits = 3)}]")
+CIepsilon <- glue("[{round(epsilon_ci[1], digits = 3)}, {round(epsilon_ci[2], digits = 3)}]")
+CItheta   <- glue("[{round(theta_ci[1], digits = 3)}, {round(theta_ci[2], digits = 3)}]")
 
 CI_param <- c("", "", "", "", CIp, "", CIepsilon, "", CItheta, "")
 
