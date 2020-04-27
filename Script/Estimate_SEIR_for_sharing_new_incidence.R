@@ -43,6 +43,7 @@ library(glue)
 library(rebus)
 library(patchwork)
 library(furrr)
+library(ggthemes)
 
 plan(multiprocess)
 
@@ -500,52 +501,11 @@ df_incidence %>%
              data = df_incidence %>% filter(Type == "Observed"),
              size = 2) +
   xlab("") +
-  ggtitle("Incidence, fitted and observed") +
+  ggtitle("Stockholm incidence") +
   scale_color_manual(values = c("black", "red")) +
   scale_size_manual(values = c(0.5, 1.05)) +
-  theme_minimal() +
+  theme_hc() +
   theme(legend.position = "top", legend.title = element_blank())
-
-
-# Look at the estimated infectivity and basic reproductive number
-
-df_R0 <- fit %>% 
-  select(Day, Date) %>%
-  mutate(days_from_wfh = as.integer(Date - wfh_date)) %>%
-  mutate(R0 = Basic_repr(t = Day, 
-                         t_b = days_from_wfh_date,
-                         delta = Opt_par["delta"],
-                         epsilon = Opt_par["epsilon"],  
-                         theta = Opt_par["theta"],
-                         gamma = gammaD,
-                         p_symp = p_symp_use,
-                         p_lower_inf = p_lower_inf_use))
-
-df_infectivity <- fit %>% 
-  select(Day, Date) %>%
-  mutate(days_from_wfh = as.integer(Date - wfh_date)) %>%
-  mutate(Infectivity = beta(t = Day, 
-                            t_b = days_from_wfh_date,
-                            delta = Opt_par["delta"], 
-                            epsilon = Opt_par["epsilon"],  
-                            theta = Opt_par["theta"])) 
-
-plot_R0 <- df_R0 %>%
-  ggplot() + 
-  geom_line(aes(x = Date, y = R0), size = 1.05) +
-  ylab("R0(t)") + 
-  ggtitle("Estimated reproductive number") +
-  theme_minimal()
-
-plot_infectivity <- df_infectivity %>%
-  ggplot() + 
-  geom_line(aes(x = Date, y = Infectivity), size = 1.05) +
-  ylab("Infectivity") + 
-  ggtitle("Estimated infectivity") +
-  theme_minimal()
-
-plot_R0 + plot_infectivity + plot_layout(nrow = 2)
-
 
 #-------------------------------------------------
 # Calculate results to save in tables
@@ -613,8 +573,9 @@ sims_df <- sims_df_raw %>%
   group_by(Day, Date, name) %>% 
   summarize_at(vars(everything()), p_funs)
 
+# Look at the estimated infectivity and basic reproductive number
 
-sims_df %>%
+plot_R0 <- sims_df %>%
   filter(name == "R0") %>%
   ggplot(aes(x = Date)) +
   geom_line(aes(y = `50%`), size = 1.05) +
@@ -622,11 +583,27 @@ sims_df %>%
   geom_ribbon(aes(ymin = `5%`, ymax = `95%`), alpha = 0.25) +
   geom_ribbon(aes(ymin = `2.5%`, ymax = `97.5%`), alpha = 0.125) +
   xlab("") + ylab("R0(t)") +
-  ggtitle("Estimated reproductive number",
-          glue("Black line shows median estimated R0(t),\n",
+  ggtitle("Estimated reproductive number and infectivity",
+          glue("Black line shows median estimate,\n",
                "shaded regions show 50%, 90% and 95% uncertainty intervals ",
                "in order from darkest to lightest.")) +
-  theme_minimal()
+  theme_hc()
+
+plot_infectivity <- sims_df %>%
+  filter(name == "Infectivity") %>%
+  ggplot(aes(x = Date)) +
+  geom_line(aes(y = `50%`), size = 1.05) +
+  geom_ribbon(aes(ymin = `25%`, ymax = `75%`), alpha = 0.5) +
+  geom_ribbon(aes(ymin = `5%`, ymax = `95%`), alpha = 0.25) +
+  geom_ribbon(aes(ymin = `2.5%`, ymax = `97.5%`), alpha = 0.125) +
+  xlab("") + ylab("Infectivity") +
+  # ggtitle("Estimated infectivity",
+  #         glue("Black line shows median estimated R0(t),\n",
+  #              "shaded regions show 50%, 90% and 95% uncertainty intervals ",
+  #              "in order from darkest to lightest.")) +
+  theme_hc()
+
+plot_R0 + plot_infectivity + plot_layout(nrow = 2)
 
 #27th March to 3rd April)
 infectious_report <- sims_df_raw %>%
