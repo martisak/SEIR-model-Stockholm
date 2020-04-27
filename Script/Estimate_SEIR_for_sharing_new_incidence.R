@@ -176,6 +176,32 @@ Namedate <- seq.Date(as.Date("2020-01-01"),
 dayatyear <- as.integer(Namedate - as.Date("2019-12-31"))
 
 Estimate_function_Stockholm_only_local <- function(
+#' The time-dependent infectivity rate.
+#' 
+#' @param t
+#' @param t_b
+#' @param delta
+#' @param epsilon
+#' @param theta
+beta <- function(t, t_b, delta, epsilon, theta){
+  ((1 - delta) / (1 + exp(epsilon * (-(t - t_b)))) + delta) * theta
+}
+
+#' The time-dependent basic reproductive number.
+#' 
+#' @param t
+#' @param t_b
+#' @param delta
+#' @param epsilon
+#' @param theta
+#' @param gamma
+Basic_repr <- function(t, t_b, delta, epsilon, theta, gamma, p_symp, 
+                       p_lower_inf) {
+  a <- p_symp * beta(t, t_b, delta, epsilon, theta)
+  b <- (1 - p_symp) * p_lower_inf * beta(t, t_b, delta, epsilon, theta)
+  res <- (a + b) / gamma
+  return(res)
+}
     p_symp = 0.5, 
     p_lower_inf = 0.5, 
     gammaD = gammaD_value, 
@@ -344,8 +370,8 @@ Estimate_function_Stockholm_only_local <- function(
               Namedate = Namedate, 
               Optimisation = Opt, 
               Opt_par = Opt_par,
-              Infectivity = beta_peak_free, 
-              Basic_reproduction = Basic_repr, 
+              all_fitted = fits,
+              failed_solves = fails,
               Initial_values = init, 
               SEIR_model = model))
 }
