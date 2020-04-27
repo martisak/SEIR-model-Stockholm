@@ -175,7 +175,6 @@ Namedate <- seq.Date(as.Date("2020-01-01"),
                      by = "month")
 dayatyear <- as.integer(Namedate - as.Date("2019-12-31"))
 
-Estimate_function_Stockholm_only_local <- function(
 wfh_date <- as.Date("2020-03-16")
 days_from_wfh_date <- as.integer(wfh_date - as.Date("2019-12-31"))
 
@@ -205,6 +204,17 @@ Basic_repr <- function(t, t_b, delta, epsilon, theta, gamma, p_symp,
   res <- (a + b) / gamma
   return(res)
 }
+
+#' Estimate free SEIR parameters for Stockholm data.
+#' 
+#' @param p_symp
+#' @param p_lower_inf
+#' @param gammaD
+#' @param eta
+#' @param iter
+#' @param wfh_date
+#' @param non_reported
+Stockholm_SEIR <- function(
     p_symp = 0.5, 
     p_lower_inf = 0.5, 
     gammaD = gammaD_value, 
