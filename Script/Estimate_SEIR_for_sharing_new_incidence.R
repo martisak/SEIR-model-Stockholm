@@ -542,15 +542,21 @@ sims_df_raw <- furrr::future_map_dfr(1:n_sims, function(n) {
     iteration = n,
     Day = fit$Day,
     Date = fit$Date,
-    R0 = map(fit$Day, 
-             function(t) Basic_repr(t, 
-                                    t_b = days_from_wfh_date,
-                                    delta = par_sims[n, "delta"], 
-                                    epsilon = par_sims[n, "epsilon"], 
-                                    theta = par_sims[n, "theta"], 
-                                    gamma = gammaD,
-                                    p_symp = ,
-                                    p_lower_inf = )) %>% unlist())
+    R0 = map(fit$Day, function(t) {
+      Basic_repr(t, 
+                 t_b = days_from_wfh_date,
+                 delta = par_sims[n, "delta"], 
+                 epsilon = par_sims[n, "epsilon"], 
+                 theta = par_sims[n, "theta"], 
+                 gamma = Est_par_model$args$gammaD,
+                 p_symp = Est_par_model$args$p_symp,
+                 p_lower_inf = Est_par_model$args$p_lower_inf)
+      }) %>% unlist()) %>%
+    mutate(Infectivity = beta(t = Day, 
+                              t_b = days_from_wfh_date,
+                              delta = par_sims[n, "delta"], 
+                              epsilon = par_sims[n, "epsilon"],  
+                              theta = par_sims[n, "theta"]))
   df2 <- ode(y = init, 
              times = fit$Day, 
              func = SEIR_model, 
@@ -568,7 +574,7 @@ p_names <- map_chr(p, ~paste0(.x*100, "%"))
 p_funs <- map(p, ~partial(quantile, probs = .x, na.rm = TRUE)) %>% 
   set_names(nm = p_names)
 sims_df <- sims_df_raw %>% 
-  pivot_longer(cols = c(R0, S, E, I_symp, I_asymp, R)) %>%
+  pivot_longer(cols = c(R0, Infectivity, S, E, I_symp, I_asymp, R)) %>%
   select(-iteration) %>% 
   group_by(Day, Date, name) %>% 
   summarize_at(vars(everything()), p_funs)
