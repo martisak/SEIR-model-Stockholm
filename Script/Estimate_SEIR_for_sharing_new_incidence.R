@@ -622,7 +622,27 @@ infectious_report <- sims_df_raw %>%
             `2.5%` = quantile(infectious, 0.025),
             `97.5%` = quantile(infectious, 0.975))
   
-
+# Plot model compartments
+sims_df %>%
+  filter(name != "R0") %>%
+  mutate(name = factor(name, levels = c("S", "E", "I_symp", "I_asymp", "R"))) %>%
+  ggplot(aes(x = Date)) +
+  geom_line(aes(y = `50%` / N), size = 1.05) +
+  geom_ribbon(aes(ymin = `25%` / N, ymax = `75%` / N), alpha = 0.5) +
+  geom_ribbon(aes(ymin = `5%` / N, ymax = `95%` / N), alpha = 0.25) +
+  geom_ribbon(aes(ymin = `2.5%` / N, ymax = `97.5%` / N), alpha = 0.125) +
+  xlab("") + ylab("") +
+  ggtitle("SEIR compartments",
+          glue("Black line shows median fraction of population,\n",
+               "shaded regions show 50%, 90% and 95% uncertainty intervals ",
+               "in order from darkest to lightest.")) +
+  theme_hc() +
+  facet_grid(name ~ ., scales = "free_y") +
+  theme(panel.spacing = unit(1.25, "lines"))
+  # theme(panel.background = element_rect(fill = NA, 
+  #                                       color = "black",
+  #                                       size = 1/10,
+  #                                       linetype = "solid"))
 
 #############################################
 ## save estimated parameters and their SE  ##
