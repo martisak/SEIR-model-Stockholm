@@ -388,7 +388,7 @@ Stockholm_SEIR <- function(
   # Redo optimization for multiple starting values in parallel. Pick the best.
   fits <- furrr::future_map(1:iter, fitter, .progress = TRUE)
   best_index <- purrr::map(fits, 
-                           ~ ifelse(det(1/(2*sigest^2)*.x$hessian) > 0, 
+                           ~ ifelse(det(.x$hessian) > 0, 
                                     .x$value, 
                                     Inf)) %>% unlist() %>% which.min()
   Opt <- fits[[best_index]]
@@ -439,9 +439,8 @@ p_lower_inf_use <- 1
 
 
 Est_par_model <- Stockholm_SEIR(p_symp = p_symp_use, 
-                                iter=100,
+                                iter=10,
                                 p_lower_inf = p_lower_inf_use)
-
 
 # Days of incidence
 Day <- Est_par_model$Day
@@ -526,7 +525,7 @@ df_incidence <- df_stockholm %>%
                                         "Fitted (Reported)",
                                         "Fitted (Unreported)")))
 
-df_incidence %>%
+plot_fitted_incidence <- df_incidence %>%
   filter(Type != "Fitted (Unreported)") %>%
   ggplot() + 
   geom_line(aes(x = Date, y = Incidence, color = Type, size = Type)) + 
@@ -534,11 +533,16 @@ df_incidence %>%
              data = df_incidence %>% filter(Type == "Observed"),
              size = 2) +
   xlab("") +
+  ylab("Reported\ncases") +
   ggtitle("Stockholm incidence") +
   scale_color_manual(values = c("black", "red")) +
   scale_size_manual(values = c(0.5, 1.05)) +
   theme_hc() +
-  theme(legend.position = "top", legend.title = element_blank())
+  theme(legend.position = "top", legend.title = element_blank()) +
+  theme(axis.title.y = element_text(angle = 0, vjust=1.05, margin = margin(l=10)))
+
+ggsave("./Results/Figures/fitted_incidence.png",
+       plot_fitted_incidence)
 
 #-------------------------------------------------
 # Calculate results to save in tables
@@ -642,7 +646,11 @@ plot_infectivity <- sims_df %>%
   #              "in order from darkest to lightest.")) +
   theme_hc()
 
-plot_R0 + plot_infectivity + plot_layout(nrow = 2)
+plot_R0_infectivity <- plot_R0 + plot_infectivity + plot_layout(nrow = 2)
+
+ggsave("./Results/Figures/R0_infectivity.png",
+       plot_R0_infectivity)
+
 
 #27th March to 3rd April)
 infectious_report <- sims_df_raw %>%
@@ -656,9 +664,12 @@ infectious_report <- sims_df_raw %>%
             `97.5%` = quantile(infectious, 0.975))
   
 # Plot model compartments
-sims_df %>%
-  filter(name != "R0") %>%
-  mutate(name = factor(name, levels = c("S", "E", "I_symp", "I_asymp", "R"))) %>%
+model_compartments <- sims_df %>%
+  filter(!(name %in% c("R0", "Infectivity"))) %>%
+  mutate(name = factor(name, 
+                       levels = c("S", "E", "I_symp", "I_asymp", "R"),
+                       labels = c("Susceptible", "Exposed", "Infected (symptomatic)",
+                                  "Infected (asymptomatic)", "Removed"))) %>%
   ggplot(aes(x = Date)) +
   geom_line(aes(y = `50%` / N), size = 1.05) +
   geom_ribbon(aes(ymin = `25%` / N, ymax = `75%` / N), alpha = 0.5) +
@@ -671,11 +682,15 @@ sims_df %>%
                "in order from darkest to lightest.")) +
   theme_hc() +
   facet_grid(name ~ ., scales = "free_y") +
-  theme(panel.spacing = unit(1.25, "lines"))
+  theme(panel.spacing = unit(1.25, "lines")) +
+  theme(strip.text.y.right = element_text(angle = 0))
   # theme(panel.background = element_rect(fill = NA, 
   #                                       color = "black",
   #                                       size = 1/10,
   #                                       linetype = "solid"))
+
+ggsave("./Results/Figures/model_compartments.png",
+       model_compartments)
 
 #############################################
 ## save estimated parameters and their SE  ##
