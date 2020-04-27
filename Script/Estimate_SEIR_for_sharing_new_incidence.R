@@ -364,7 +364,10 @@ Stockholm_SEIR <- function(
   
   # Redo optimization for multiple starting values in parallel. Pick the best.
   fits <- furrr::future_map(1:iter, fitter, .progress = TRUE)
-  best_index <- purrr::map(fits, ~ .x$value) %>% unlist() %>% which.min()
+  best_index <- purrr::map(fits, 
+                           ~ ifelse(det(1/(2*sigest^2)*.x$hessian) > 0, 
+                                    .x$value, 
+                                    Inf)) %>% unlist() %>% which.min()
   Opt <- fits[[best_index]]
   fails <- Opt$fails
   
