@@ -220,40 +220,26 @@ Stockholm_SEIR <- function(
     gammaD = gammaD_value, 
     eta = eta_value, 
     iter = 20,
-    wfh_date = as.Date("2020-03-16"),
-    non_reported = FALSE,
-    verbose = TRUE) {
+    .wfh_date = as.Date("2020-03-16"),
+    non_reported = FALSE) {
   
   ## Population size Stockholm
   N <- Region_population %>% filter(ARegion == "Stockholm") %>% pull(Pop)
   
+  t_b <- as.integer(.wfh_date - as.Date("2019-12-31"))
+  
   Opt_par_names <- c("logit_delta", "epsilon", "log_theta")
     
-  ## Function to create guesses for the optimisation
-  ## The range of the guesses can be changed, 
-  ## these are good for the specific dates and parameter combinations of p_symp and p_lower_inf
+  # Function to create guesses for the optimisation.
+  # The range of the guesses can be changed, these are good for the specific 
+  # dates and parameter combinations of p_symp and p_lower_inf.
   Guesses <- function() { 
     
     u_d <- logit(runif(1, 0.05, 0.6)) # guess for logit_delta 
-    u_e <- runif(1, -0.6, 0)    # guess for epsilon
-    u_t <- log(runif(1, 0, 15))      # guess for log_theta
+    u_e <- runif(1, -0.6, 0)          # guess for epsilon
+    u_t <- log(runif(1, 0, 15))       # guess for log_theta
 
     return(c(u_d, u_e, u_t))
-  }
-  
-  ## The time-dependent infectivity rate 
-  beta_peak_free <- function(t, delta, epsilon, theta){
-    t_b <- as.integer(wfh_date - as.Date("2019-12-31"))
-    res <- ((1 - delta) / (1 + exp(epsilon * (-(t - t_b)))) + delta) * theta 
-    return(res)
-  }
-  
-  ## The time-dependent basic reproductive number
-  Basic_repr <- function(t, delta, epsilon, theta, gamma) {
-    a <- p_symp * beta_peak_free(t, delta, epsilon, theta)
-    b <- (1 - p_symp) * p_lower_inf * beta_peak_free(t, delta, epsilon, theta)
-    res <- (a + b) / gamma
-    return(res)
   }
  
   # The SEIR model. 
@@ -267,10 +253,10 @@ Stockholm_SEIR <- function(
     # R       <- state[5] # recovered/immune
     par <- as.list(c(state, parameters))
     with(par, {
-      dS <- -beta_peak_free(time, delta, epsilon, theta) * S * I_symp / N -
-            p_lower_inf * beta_peak_free(time, delta, epsilon, theta) * S * I_asymp/N
-      dE <- beta_peak_free(time, delta, epsilon, theta) * S * I_symp / N + 
-            p_lower_inf * beta_peak_free(time, delta, epsilon, theta) * S * I_asymp/N - 
+      dS <- -beta(time, t_b, delta, epsilon, theta) * S * I_symp / N -
+            p_lower_inf * beta(time, t_b, delta, epsilon, theta) * S * I_asymp/N
+      dE <- beta(time, t_b, delta, epsilon, theta) * S * I_symp / N + 
+            p_lower_inf * beta(time, t_b, delta, epsilon, theta) * S * I_asymp/N - 
             eta * E
       dI_symp <- p_symp * eta * E - gammaD * I_symp
       dI_asymp <- (1 - p_symp) * eta * E - gammaD * I_asymp
@@ -309,7 +295,8 @@ Stockholm_SEIR <- function(
                  epsilon = parameters["epsilon"],
                  theta = exp(parameters["log_theta"]))
     
-    Dummy_infectivity <- beta_peak_free(t = c(0:700), 
+    Dummy_infectivity <- beta(t = c(0:700), 
+                                        t_b,
                                         delta = pars$delta, 
                                         epsilon = pars$epsilon,  
                                         theta = pars$theta)
@@ -337,7 +324,7 @@ Stockholm_SEIR <- function(
       
       # For transparency, the old incorrect incidence was expressed as:
       
-      # fitted_incidence  <- beta_peak_free(
+      # fitted_incidence  <- beta(
       #   out[,1], 
       #   delta = parameters[1], 
       #   epsilon = parameters[2], 
@@ -353,16 +340,21 @@ Stockholm_SEIR <- function(
     conl <- list(maxit = 1000, abstol = Atol, reltol = Rtol)
     Opt <- optim(Guess, RSS, control = list(conl), hessian = TRUE)
 
+    fails <- 0
     while (Opt$convergence > 0) {
+      fails <- fails + 1
       Guess <- Guesses()
       Opt <- optim(Guess, RSS, control = list(conl), hessian = TRUE)
     }
+    Opt["fails"] <- fails
     return(Opt)
   }
   
+  # Redo optimization for multiple starting values in parallel. Pick the best.
   fits <- furrr::future_map(1:iter, fitter, .progress = TRUE)
   best_index <- purrr::map(fits, ~ .x$value) %>% unlist() %>% which.min()
   Opt <- fits[[best_index]]
+  fails <- Opt$fails
   
   Opt_par_transformed <- Opt$par
   names(Opt_par_transformed) <- Opt_par_names
@@ -408,8 +400,9 @@ p_asymp_use     <- 1 - p_symp_use
 p_lower_inf_use <- 1
 
 
-Est_par_model <- Estimate_function_Stockholm_only_local(p_symp = p_symp_use, 
-                                                        p_lower_inf = p_lower_inf_use)
+Est_par_model <- Stockholm_SEIR(p_symp = p_symp_use, 
+                                iter=5,
+                                p_lower_inf = p_lower_inf_use)
 
 
 # Days of incidence
@@ -427,8 +420,6 @@ Est
 Opt_par <- Est_par_model$Opt_par
 
 # functions based on model scenario
-Basic_repr <- Est_par_model$Basic_reproduction
-beta       <- Est_par_model$Infectivity
 SEIR_model <- Est_par_model$SEIR_model
 
 # initial values based on model scenario
@@ -508,22 +499,33 @@ df_incidence %>%
   geom_point(aes(x = Date, y = Incidence), 
              data = df_incidence %>% filter(Type == "Observed"),
              size = 2) +
+  xlab("") +
+  ggtitle("Incidence, fitted and observed") +
   scale_color_manual(values = c("black", "red")) +
   scale_size_manual(values = c(0.5, 1.05)) +
-  theme_minimal()
+  theme_minimal() +
+  theme(legend.position = "top", legend.title = element_blank())
 
 
 # Look at the estimated infectivity and basic reproductive number
 
-df_R0 <- fit %>% select(Day, Date) %>%
-  mutate(R0 = Basic_repr(Day, 
+df_R0 <- fit %>% 
+  select(Day, Date) %>%
+  mutate(days_from_wfh = as.integer(Date - wfh_date)) %>%
+  mutate(R0 = Basic_repr(t = Day, 
+                         t_b = days_from_wfh_date,
                          delta = Opt_par["delta"],
                          epsilon = Opt_par["epsilon"],  
                          theta = Opt_par["theta"],
-                         gamma = gammaD))
+                         gamma = gammaD,
+                         p_symp = p_symp_use,
+                         p_lower_inf = p_lower_inf_use))
 
-df_infectivity <- fit %>% select(Day, Date) %>%
-  mutate(Infectivity = beta(Day, 
+df_infectivity <- fit %>% 
+  select(Day, Date) %>%
+  mutate(days_from_wfh = as.integer(Date - wfh_date)) %>%
+  mutate(Infectivity = beta(t = Day, 
+                            t_b = days_from_wfh_date,
                             delta = Opt_par["delta"], 
                             epsilon = Opt_par["epsilon"],  
                             theta = Opt_par["theta"])) 
@@ -581,11 +583,14 @@ sims_df_raw <- furrr::future_map_dfr(1:n_sims, function(n) {
     Day = fit$Day,
     Date = fit$Date,
     R0 = map(fit$Day, 
-             function(x) Basic_repr(x, 
+             function(t) Basic_repr(t, 
+                                    t_b = days_from_wfh_date,
                                     delta = par_sims[n, "delta"], 
                                     epsilon = par_sims[n, "epsilon"], 
                                     theta = par_sims[n, "theta"], 
-                                    gamma = gammaD)) %>% unlist())
+                                    gamma = gammaD,
+                                    p_symp = ,
+                                    p_lower_inf = )) %>% unlist())
   df2 <- ode(y = init, 
              times = fit$Day, 
              func = SEIR_model, 
