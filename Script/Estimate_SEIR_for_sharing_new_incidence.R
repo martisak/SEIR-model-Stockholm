@@ -350,13 +350,36 @@ Stockholm_SEIR <- function(
   fitter <- function(x) {
     Guess <- Guesses()
     conl <- list(maxit = 1000, abstol = Atol, reltol = Rtol)
-    Opt <- optim(Guess, RSS, control = list(conl), hessian = TRUE)
+    
+    Opt <- tryCatch({
+      optim(Guess, RSS, control = list(conl), hessian = TRUE)
+    }, error = function(e) {
+      list(convergence = 0)
+      message("optim error with the following message: ")
+      message(e)
+    },
+    warning = function(w) {
+      message("optim warning with the following message: ")
+      message(w)
+    },
+    finally = {})
 
     fails <- 0
     while (Opt$convergence > 0) {
       fails <- fails + 1
       Guess <- Guesses()
-      Opt <- optim(Guess, RSS, control = list(conl), hessian = TRUE)
+      Opt <- tryCatch({
+        optim(Guess, RSS, control = list(conl), hessian = TRUE)
+      }, error = function(e) {
+        list(convergence = 0)
+        message("optim error with the following message: ")
+        message(e)
+      },
+      warning = function(w) {
+        message("optim warning with the following message: ")
+        message(w)
+      },
+      finally = {})
     }
     Opt["fails"] <- fails
     return(Opt)
