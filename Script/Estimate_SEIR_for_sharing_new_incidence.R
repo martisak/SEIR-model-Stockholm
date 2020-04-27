@@ -176,6 +176,9 @@ Namedate <- seq.Date(as.Date("2020-01-01"),
 dayatyear <- as.integer(Namedate - as.Date("2019-12-31"))
 
 Estimate_function_Stockholm_only_local <- function(
+wfh_date <- as.Date("2020-03-16")
+days_from_wfh_date <- as.integer(wfh_date - as.Date("2019-12-31"))
+
 #' The time-dependent infectivity rate.
 #' 
 #' @param t
