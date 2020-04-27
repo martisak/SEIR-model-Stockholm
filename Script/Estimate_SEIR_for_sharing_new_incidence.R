@@ -114,9 +114,20 @@ CRI_95_up <- function(x){
 # This is the data used in the analysis. It differs from some of the reported case data since we 
 # removed imported cases. 
 
-Stockholm_Data_10_april <- read_delim(
+df_stockholm <- read_delim(
   paste0(data.path, "/Data_2020-04-10Ny.txt"),
-  delim = " ", col_names = TRUE)
+  delim = " ", col_names = TRUE) %>%
+  mutate(Date = Datum,
+         Incidence = Incidens)
+
+# Uncomment to use updated data
+data_link <- "https://fohm.maps.arcgis.com/sharing/rest/content/items/b5e7488e117749c19881cce45db13f7e/data"
+df_stockholm <- read.xlsx(data_link) %>%
+  as_tibble() %>%
+  mutate(Date = as.Date(Statistikdatum, origin = "1900-01-01")) %>%
+  rename(Incidence = Stockholm) %>%
+  select(Date, Incidence) %>%
+  filter(row_number() >= which.max(Incidence > 0))
 
 # Take out population
 pop_dfs <- mget(load(file.path(data.path, "Sverige_population_2019.Rdata")))
@@ -167,8 +178,8 @@ expit <- function(x) {
 }
 
 ## Daily incidence reported cases and their dates
-Incidence <- Stockholm_Data_10_april$Incidens
-Datum     <- as.Date(Stockholm_Data_10_april$Datum)
+Incidence <- df_stockholm$Incidence
+Datum     <- as.Date(df_stockholm$Date)
 Day       <- as.integer(Datum - as.Date("2019-12-31"))
 
 Namedate <- seq.Date(as.Date("2020-01-01"), 
@@ -236,8 +247,8 @@ Stockholm_SEIR <- function(
   # dates and parameter combinations of p_symp and p_lower_inf.
   Guesses <- function() { 
     
-    u_d <- logit(runif(1, 0.05, 0.6)) # guess for logit_delta 
-    u_e <- runif(1, -0.6, 0)          # guess for epsilon
+    u_d <- logit(runif(1, 0.05, 0.95)) # guess for logit_delta 
+    u_e <- runif(1, -1, 1)          # guess for epsilon
     u_t <- log(runif(1, 0, 15))       # guess for log_theta
 
     return(c(u_d, u_e, u_t))
@@ -402,7 +413,7 @@ p_lower_inf_use <- 1
 
 
 Est_par_model <- Stockholm_SEIR(p_symp = p_symp_use, 
-                                iter=5,
+                                iter=100,
                                 p_lower_inf = p_lower_inf_use)
 
 
@@ -464,8 +475,6 @@ fit_I <- fit_I_symp + fit_I_asymp
 fit_I_E <- fit_E + fit_I
 fit_cum_inf <- N - fit_S
 
-
-
 ## The mean prevalence same days as the Hälsorapport Stockholmsstudien (27th March to 3rd April)
 Smittsamma <- fit_I_symp + fit_I_asymp #+ fit_E
 SmittsammaF <-  Smittsamma[40:47]
@@ -478,9 +487,7 @@ mean(SmittsammaF/N)
 fitted_incidence <- p_symp_use * fit_E * eta
 fitted_incidence_non_report  <- (1 - p_symp_use) * fit_E * eta
 
-df_incidence <- Stockholm_Data_10_april %>% 
-  rename(Date = Datum,
-         Incidence = Incidens) %>%
+df_incidence <- df_stockholm %>% 
   mutate(Type = "Observed") %>%
   bind_rows(tibble(Date = t_date,
                    Incidence = fitted_incidence,
